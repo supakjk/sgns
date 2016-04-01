@@ -6,7 +6,7 @@
 require('sys')
 require('paths')
 require('math')
-require('nn')
+require('torch')
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -21,8 +21,8 @@ cmd:option('-negative', 3, '# negative samples')
 cmd:option('-alpha', 0.025, 'initial learning rate')
 cmd:option('-iter', 5, '# epochs')
 cmd:option('-sample', 1e-5, 'set threshold for occurrence of words (frequent words will be randomly down-sampled)')
-cmd:option('-min_count', 0, 'minimum word frequencies (words occuring less than this is skipped)')
-cmd:option('-out_dir', '', 'the directory weights will be saved')
+cmd:option('-min_count', 0, 'minimum word frequencies. words occuring less than this is skipped when -read_vocab is not set')
+cmd:option('-out_dir', '', 'the directory, where weights of all the iterations are saved')
 
 local params = cmd:parse(arg)
 
@@ -177,11 +177,10 @@ end
 --~
 
 -- variables
-local word_mat = nn.LookupTable(vocab_cnt, params.size)
-word_mat.weight:uniform(-0.5/params.size, 0.5/params.size)
-local target_mat = nn.LookupTable(vocab_cnt, params.size)
-target_mat.weight:zero()
-target_mat.gradWeight = nil
+local word_mat = torch.FloatTensor(vocab_cnt, params.size)
+word_mat:uniform(-0.5/params.size, 0.5/params.size)
+local word_grad_vec = torch.FloatTensor(params.size):zero()
+local target_mat = torch.FloatTensor(vocab_cnt, params.size):zero()
 
 local sampled_sent = torch.IntTensor(2000)
 
@@ -243,8 +242,7 @@ end
 
 -- optimization with negative sampling
 function negative_sampling(input_word, v)
-	local input_weight = word_mat.weight[input_word]
-	local input_gradWeight = word_mat.gradWeight[input_word]
+	local input_weight = word_mat[input_word]
 	local cur_epoch_loss = 0
 
 	for j=1,params.negative+1 do	-- for each correct target and negative sampled target
@@ -258,7 +256,7 @@ function negative_sampling(input_word, v)
 			label = 0
 		end
 
-		local target_weight = target_mat.weight[target]
+		local target_weight = target_mat[target]
 
 		f = input_weight * target_weight
 		if f > MAX_EXP then
@@ -268,19 +266,21 @@ function negative_sampling(input_word, v)
 		else
 			g = (label - expTable[math.floor( (f+MAX_EXP) * (EXP_TABLE_SIZE/MAX_EXP/2) ) + 1]) * alpha
 		end
-		input_gradWeight:add(g, target_weight)
+		word_grad_vec:add(g, target_weight)
 		target_weight:add(g, input_weight)
 		cur_epoch_loss = cur_epoch_loss - g / alpha
 
 		::NS_LOOP_END::
 	end
 
-	input_weight:add(input_gradWeight)
-	input_gradWeight:zero()
+	input_weight:add(word_grad_vec)
+	word_grad_vec:zero()
 	return cur_epoch_loss
 end
 
 
+--ProFi = require 'ProFi'
+--ProFi:start()
 for epoch=1,params.iter do
 	print('epoch: ' .. epoch)
 	local epoch_loss = 0
@@ -314,6 +314,7 @@ for epoch=1,params.iter do
 		end
 
 		line_cnt = line_cnt + 1
+		--if line_cnt >= 100000 then break end
 	end
 
 	file:close()
@@ -328,7 +329,9 @@ for epoch=1,params.iter do
 		best_loss = epoch_loss
 	end
 
-	torch.save(params.out_dir .. '/weight_' .. epoch .. '.th', word_mat.weight)
+	torch.save(params.out_dir .. '/weight_' .. epoch .. '.th', word_mat)
 end
 
 print('least gradient sum: ' .. best_loss)
+--ProFi:stop()
+--ProFi:writeReport('log_sgns.txt')
