@@ -7,6 +7,7 @@ require('sys')
 require('paths')
 require('math')
 require('torch')
+tds = require('tds')
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -45,7 +46,7 @@ if params.train == '' then
 end
 
 
-local vocab_idxs = {}
+local vocab_idxs = tds.Hash()
 local word_freq = torch.LongTensor()
 local file
 local vocab_cnt = 0
@@ -134,7 +135,6 @@ function get_vocab_wordfreq()
 			file:write('\n' .. v[2])
 		end
 		file:close()
-		temp_array = nil
 	else
 		io.stderr:write('Either -read_vocab or -save_vocab must be set\n')
 		os.exit()
