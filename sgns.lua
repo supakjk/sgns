@@ -3,7 +3,7 @@
 -- Initially implemented by Joo-Kyung Kim (kimjook@cse.ohio-state.edu, supakjk@gmail.com)
 
 
-require('sys')
+--require('sys')
 require('paths')
 require('math')
 require('torch')
@@ -197,7 +197,7 @@ local g	-- grad
 local f
 --~
 
-torch.manualSeed(params.seed)
+math.randomseed(params.seed)
 
 collectgarbage()
 
@@ -241,6 +241,7 @@ end
 
 
 -- optimization with negative sampling
+local next_random = 1
 function negative_sampling(input_word, v)
 	local input_weight = word_mat[input_word]
 	local cur_epoch_loss = 0
@@ -250,8 +251,9 @@ function negative_sampling(input_word, v)
 			target = sampled_sent[v]
 			label = 1
 		else
-			target = sample_list[torch.random(SAMPLE_LIST_SIZE)]
-			if target == 1 then target = torch.random(word_freq:size(1)-1) + 1 end
+			next_random = math.random(SAMPLE_LIST_SIZE)
+			target = sample_list[next_random]
+			if target == 1 then target = (next_random % (vocab_cnt-1)) + 2 end
 			if target == sampled_sent[v] then goto NS_LOOP_END end
 			label = 0
 		end
@@ -268,7 +270,7 @@ function negative_sampling(input_word, v)
 		end
 		word_grad_vec:add(g, target_weight)
 		target_weight:add(g, input_weight)
-		cur_epoch_loss = cur_epoch_loss - g / alpha
+		cur_epoch_loss = cur_epoch_loss - g
 
 		::NS_LOOP_END::
 	end
@@ -300,7 +302,7 @@ for epoch=1,params.iter do
 
 			for i=1,sampled_sent:size(1) do
 				local input_word = sampled_sent[i]
-				local cur_win_size = torch.random(params.window)
+				local cur_win_size = math.random(params.window)
 				local target_begin = math.max(i-cur_win_size, 1)
 				local target_end = math.min(sampled_sent:size(1), i+cur_win_size)
 				for v=target_begin,target_end do	-- for each context word
