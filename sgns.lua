@@ -182,7 +182,8 @@ word_mat:uniform(-0.5/params.size, 0.5/params.size)
 local word_grad_vec = torch.FloatTensor(params.size):zero()
 local target_mat = torch.FloatTensor(vocab_cnt, params.size):zero()
 
-local sampled_sent = torch.IntTensor(2000)
+local MAX_SENT_LEN = 2000
+local sampled_sent = torch.IntTensor(MAX_SENT_LEN)
 
 local word_cnt = 0
 local last_word_cnt = 0
@@ -204,14 +205,15 @@ collectgarbage()
 
 -- return a sentence tensor excluding sampled words from the sentence (proportional to # occurences)
 function sample_sent_from_line(line, seq_tensor)
-	seq_tensor:resize(2000)
+	seq_tensor:resize(MAX_SENT_LEN)
 	local sampled_sent_idx = 0
 	if params.sample > 0 then
 		for cur_word in string.gmatch(line, "%S+") do
 			local cur_word_idx = vocab_idxs[cur_word]
 			if cur_word_idx ~= nil then
 				local ran = (math.sqrt(word_freq[cur_word_idx] / (params.sample * corpus_word_cnt)) + 1) * params.sample * corpus_word_cnt / word_freq[cur_word_idx]
-				if ran >= torch.uniform() then
+				if ran >= math.random() then
+					if sampled_sent_idx >= MAX_SENT_LEN then break end
 					sampled_sent_idx = sampled_sent_idx + 1
 					seq_tensor[sampled_sent_idx] = cur_word_idx
 				end
@@ -222,6 +224,7 @@ function sample_sent_from_line(line, seq_tensor)
 		for cur_word in string.gmatch(line, "%S+") do
 			local cur_idx = vocab_idxs[cur_word]
 			if cur_idx ~= nil then
+				if sampled_sent_idx >= MAX_SENT_LEN then break end
 				sampled_sent_idx = sampled_sent_idx + 1
 				seq_tensor[sampled_sent_idx] = cur_idx
 			end
