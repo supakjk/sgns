@@ -2,12 +2,10 @@
 -- Not exactly the same but follows many of the original implementation at http://word2vec.googlecode.com/svn/trunk/
 -- Initially implemented by Joo-Kyung Kim (kimjook@cse.ohio-state.edu, supakjk@gmail.com)
 
-
---require('sys')
 require('paths')
 require('math')
 require('torch')
-tds = require('tds')
+local tds = require('tds')
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -50,7 +48,7 @@ local vocab_idxs = tds.Hash()
 local word_freq = torch.LongTensor()
 local file
 local vocab_cnt = 0
-local corpus_word_cnt
+local corpus_word_cnt = 0
 
 
 --- get the vocabulary index and word frequencies from the corpus
@@ -284,8 +282,6 @@ function negative_sampling(input_word, v)
 end
 
 
---ProFi = require 'ProFi'
---ProFi:start()
 for epoch=1,params.iter do
 	print('epoch: ' .. epoch)
 	local epoch_loss = 0
@@ -338,5 +334,3 @@ for epoch=1,params.iter do
 end
 
 print('least gradient sum: ' .. best_loss)
---ProFi:stop()
---ProFi:writeReport('log_sgns.txt')
