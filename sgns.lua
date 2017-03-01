@@ -1,4 +1,4 @@
--- A torch-based implementation of skip-gram with negative samping
+-- A torch-based implementation of skip-gram with negative sampling
 -- Not exactly the same but follows many of the original implementation at http://word2vec.googlecode.com/svn/trunk/
 -- Initially implemented by Joo-Kyung Kim (kimjook@cse.ohio-state.edu, supakjk@gmail.com)
 
